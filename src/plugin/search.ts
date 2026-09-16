@@ -10,6 +10,7 @@ import {
   ANTIGRAVITY_ENDPOINT,
   getAntigravityHeaders,
   SEARCH_MODEL,
+  SEARCH_MODELS,
   SEARCH_TIMEOUT_MS,
   SEARCH_SYSTEM_INSTRUCTION,
 } from "../constants";
@@ -280,34 +281,54 @@ export async function executeSearch(
     thinking,
   });
 
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        ...getAntigravityHeaders(),
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(wrappedBody),
-      signal: abortSignal ?? AbortSignal.timeout(SEARCH_TIMEOUT_MS),
-    });
+  const modelsToTry = SEARCH_MODELS;
+  let lastErrorText = "";
+  let lastStatus = 0;
+  let lastStatusText = "";
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      log.debug("Search API error", { status: response.status, error: errorText });
-      return `## Search Error\n\nFailed to execute search: ${response.status} ${response.statusText}\n\n${errorText}\n\nPlease try again with a different query.`;
+  for (const modelName of modelsToTry) {
+    wrappedBody.model = modelName;
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          ...getAntigravityHeaders(),
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(wrappedBody),
+        signal: abortSignal ?? AbortSignal.timeout(SEARCH_TIMEOUT_MS),
+      });
+
+      if (!response.ok) {
+        lastStatus = response.status;
+        lastStatusText = response.statusText;
+        lastErrorText = await response.text();
+        log.debug("Search API error on model", { model: modelName, status: response.status, error: lastErrorText });
+
+        // If capacity exhausted or service unavailable, try next model in fallback list
+        if (response.status === 503 || response.status === 429 || lastErrorText.includes("CAPACITY") || lastErrorText.includes("no longer available")) {
+          continue;
+        }
+
+        return `## Search Error\n\nFailed to execute search: ${response.status} ${response.statusText}\n\n${lastErrorText}\n\nPlease try again with a different query.`;
+      }
+
+      const data = (await response.json()) as AntigravitySearchResponse;
+      log.debug("Search response received", { model: modelName, hasResponse: !!data.response });
+
+      const result = parseSearchResponse(data);
+      const formatted = formatSearchResult(result);
+      log.debug("Search response formatted", { resultLength: formatted.length });
+      return formatted;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log.debug("Search execution error on model", { model: modelName, error: message });
+      if (modelName === modelsToTry[modelsToTry.length - 1]) {
+        return `## Search Error\n\nFailed to execute search: ${message}. Please try again with a different query.`;
+      }
     }
-
-    const data = (await response.json()) as AntigravitySearchResponse;
-    log.debug("Search response received", { hasResponse: !!data.response });
-
-    const result = parseSearchResponse(data);
-    const formatted = formatSearchResult(result);
-    log.debug("Search response formatted", { resultLength: formatted.length });
-    return formatted;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    log.debug("Search execution error", { error: message });
-    return `## Search Error\n\nFailed to execute search: ${message}. Please try again with a different query.`;
   }
+
+  return `## Search Error\n\nFailed to execute search: ${lastStatus} ${lastStatusText}\n\n${lastErrorText}\n\nPlease try again with a different query.`;
 }
