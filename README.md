@@ -40,39 +40,45 @@ Enable Opencode to authenticate against **Antigravity** (Google's IDE) via OAuth
 ## Installation
 
 <details open>
-<summary><b>For Humans</b></summary>
+<summary><b>Quick Setup (Clone & Build)</b></summary>
 
-**Option A: Let an LLM do it**
+1. **Clone the repository and build it locally:**
 
-Paste this into any LLM agent (Claude Code, OpenCode, Cursor, etc.):
+   ```bash
+   git clone https://github.com/HokageZ/opencode-antigravity-auth.git
+   cd opencode-antigravity-auth
+   npm install
+   npm run build
+   ```
 
-```
-Install the opencode-antigravity-auth plugin and add the Antigravity model definitions to ~/.config/opencode/opencode.json by following: https://raw.githubusercontent.com/NoeFabris/opencode-antigravity-auth/dev/README.md
-```
-
-**Option B: Manual setup**
-
-1. **Add the plugin** to `~/.config/opencode/opencode.json`:
+2. **Add the local build to your OpenCode configuration** in `~/.config/opencode/opencode.json`:
 
    ```json
    {
-     "plugin": ["opencode-antigravity-auth@latest"]
+     "plugin": [
+       "file:///path/to/opencode-antigravity-auth/dist/index.js"
+     ]
    }
    ```
 
-   > Want bleeding-edge features? Use `opencode-antigravity-auth@beta` instead.
+   > **Windows users**: Use the full file URI with forward slashes:
+   > ```json
+   > {
+   >   "plugin": [
+   >     "file:///C:/Users/YourUsername/opencode-antigravity-auth/dist/index.js"
+   >   ]
+   > }
+   > ```
 
-2. **Login** with your Google account:
+3. **Login with your Google account(s):**
 
    ```bash
    opencode auth login
    ```
 
-3. **Models** — current OpenCode versions can load plugin models dynamically at runtime. If your OpenCode version still requires static provider config, choose one:
-   - Run `opencode auth login` → Google → OAuth with Google (Antigravity) → select **"Configure models in opencode.json"** (auto-configures all models)
-   - Or manually copy the [full configuration](#models) below
+4. **Models** — OpenCode dynamically discovers available Antigravity models at runtime from your connected accounts. You can also configure static entries in `opencode.json` (see [Full configuration](#models) below).
 
-4. **Use it:**
+5. **Start OpenCode:**
 
    ```bash
    opencode run "Hello" --model=google/antigravity-claude-opus-4-6-thinking --variant=max
@@ -85,15 +91,11 @@ Install the opencode-antigravity-auth plugin and add the Antigravity model defin
 
 ### Step-by-Step Instructions
 
-1. Edit the OpenCode configuration file at `~/.config/opencode/opencode.json`
-   
-   > **Note**: This path works on all platforms. On Windows, `~` resolves to your user home directory (e.g., `C:\Users\YourName`).
-
-2. Add the plugin to the `plugin` array
-
-3. Add the model definitions from the [Full models configuration](#models) section
-
-4. Set `provider` to `"google"` and choose a model
+1. Clone `https://github.com/HokageZ/opencode-antigravity-auth.git` and run `npm install && npm run build`.
+2. Edit `~/.config/opencode/opencode.json`.
+3. Add the absolute `file:///.../dist/index.js` path to the `plugin` array.
+4. Add model definitions or rely on runtime dynamic discovery.
+5. Run `opencode auth login` to authenticate Google accounts.
 
 ### Verification
 
@@ -116,7 +118,9 @@ opencode run "Hello" --model=google/antigravity-claude-opus-4-6-thinking --varia
 | `antigravity-gemini-3-pro` | low, high | Gemini 3 Pro with thinking |
 | `antigravity-gemini-3.1-pro` | low, high | Gemini 3.1 Pro with thinking (rollout-dependent) |
 | `antigravity-gemini-3-flash` | minimal, low, medium, high | Gemini 3 Flash with thinking |
-| `antigravity-gemini-3.5-flash` | minimal, low, medium, high | Gemini 3.5 Flash with thinking (rollout-dependent) |
+| `antigravity-gemini-3.5-flash` | minimal, low, medium, high | Gemini 3.5 Flash with thinking (legacy/fallback) |
+| `antigravity-gemini-3.6-flash` | low, medium, high | Gemini 3.6 Flash with thinking |
+| `antigravity-gemini-3.7-flash` | low, medium, high | Gemini 3.7 Flash with thinking |
 | `antigravity-claude-sonnet-4-6` | — | Claude Sonnet 4.6 |
 | `antigravity-claude-opus-4-6-thinking` | low, max | Claude Opus 4.6 with extended thinking |
 
@@ -159,7 +163,7 @@ Add this to your `~/.config/opencode/opencode.json`:
 ```json
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-antigravity-auth@latest"],
+  "plugin": ["file:///path/to/opencode-antigravity-auth/dist/index.js"],
   "provider": {
     "google": {
       "models": {
@@ -541,7 +545,7 @@ The correct key is `plugin` (singular):
 
 ```json
 {
-  "plugin": ["opencode-antigravity-auth@beta"]
+  "plugin": ["file:///path/to/opencode-antigravity-auth/dist/index.js"]
 }
 ```
 
