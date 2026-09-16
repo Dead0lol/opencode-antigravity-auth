@@ -89,11 +89,32 @@ Enable Opencode to authenticate against **Antigravity** (Google's IDE) via OAuth
 <details>
 <summary><b>For LLM Agents</b></summary>
 
+### Prompt for LLMs / Coding Agents
+
+Paste this prompt directly to your LLM agent (Claude Code, OpenCode, Cursor, Codex, etc.):
+
+```markdown
+Install and configure opencode-antigravity-auth locally:
+1. Clone the repo to the user's home or tools directory if not already present:
+   git clone https://github.com/HokageZ/opencode-antigravity-auth.git
+2. Navigate into the folder and build it:
+   cd opencode-antigravity-auth && npm install && npm run build
+3. Resolve the absolute path to dist/index.js with forward slashes (e.g. file:///home/user/opencode-antigravity-auth/dist/index.js or file:///C:/Users/user/opencode-antigravity-auth/dist/index.js).
+4. Update ~/.config/opencode/opencode.json to register the local plugin URI:
+   {
+     "plugin": [
+       "file:///<ABSOLUTE_PATH_TO_DIST_INDEX_JS>"
+     ]
+   }
+5. Keep existing providers/settings intact. If requested or needed, ensure model definitions from https://raw.githubusercontent.com/HokageZ/opencode-antigravity-auth/main/README.md are included under provider.google.models.
+6. Instruct the user to run `opencode auth login` to authenticate their Google Antigravity account(s).
+```
+
 ### Step-by-Step Instructions
 
 1. Clone `https://github.com/HokageZ/opencode-antigravity-auth.git` and run `npm install && npm run build`.
-2. Edit `~/.config/opencode/opencode.json`.
-3. Add the absolute `file:///.../dist/index.js` path to the `plugin` array.
+2. Edit `~/.config/opencode/opencode.json` (created if missing).
+3. Add the absolute `file:///.../dist/index.js` path to the `plugin` array using forward slashes.
 4. Add model definitions or rely on runtime dynamic discovery.
 5. Run `opencode auth login` to authenticate Google accounts.
 
