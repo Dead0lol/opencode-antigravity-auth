@@ -1,5 +1,5 @@
 import { exec } from "node:child_process";
-import { tool } from "@opencode-ai/plugin";
+import { tool } from "./plugin/v1-tool";
 import {
   ANTIGRAVITY_DEFAULT_PROJECT_ID,
   ANTIGRAVITY_ENDPOINT,
@@ -50,6 +50,7 @@ import { checkAccountsQuota, fetchAvailableModels } from "./plugin/quota";
 import { initDiskSignatureCache } from "./plugin/cache";
 import { createProactiveRefreshQueue, type ProactiveRefreshQueue } from "./plugin/refresh-queue";
 import { initLogger, createLogger } from "./plugin/logger";
+import { realFetch } from "./plugin/network";
 import { initHealthTracker, getHealthTracker, initTokenTracker, getTokenTracker } from "./plugin/rotation";
 import { initAntigravityVersion } from "./plugin/version";
 import { executeSearch } from "./plugin/search";
@@ -1745,7 +1746,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
               }
             }
             if (!isAgySdkSupportedRequest(urlString)) {
-              return fetch(input, init);
+              return realFetch(input, init);
             }
             const latest = await getAuth();
             const latestCredentials = getAgySdkCredentials(config, isApiKeyAuth(latest) ? latest : apiKeyAuth);
@@ -1756,7 +1757,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
               (config.default_retry_after_seconds ?? 60) * 1000,
             );
             if (response) return response;
-            return fetch(input, init);
+            return realFetch(input, init);
           },
         };
       }
@@ -1811,7 +1812,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
         apiKey: "",
         async fetch(input, init) {
           if (!isGenerativeLanguageRequest(input)) {
-            return fetch(input, init);
+            return realFetch(input, init);
           }
 
           // Fall back to the API-key-only sub-branch only when we have no
@@ -1841,7 +1842,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
               );
               if (response) return response;
             }
-            return fetch(input, init);
+            return realFetch(input, init);
           }
 
 
@@ -2330,7 +2331,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
 
               try {
                 pushDebug("thinking-warmup: start");
-                const warmupResponse = await fetch(warmupUrl, warmupInit);
+                const warmupResponse = await realFetch(warmupUrl, warmupInit);
                 const transformed = await transformAntigravityResponse(
                   warmupResponse,
                   true,
@@ -2505,7 +2506,7 @@ export const createAntigravityPlugin = (providerId: string) => async (
                   tokenConsumed = getTokenTracker().consume(account.index);
                 }
 
-                const response = await fetch(prepared.request, prepared.init);
+                const response = await realFetch(prepared.request, prepared.init);
                 pushDebug(`status=${response.status} ${response.statusText}`);
 
 
