@@ -467,6 +467,10 @@ function shouldSkipLocalServer(): boolean {
 
 async function openBrowser(url: string): Promise<boolean> {
   try {
+    // Terminal-only login flows (V2 CLI) opt out of auto-opening a browser.
+    if (process.env.ANTIGRAVITY_NO_BROWSER) {
+      return false;
+    }
     if (process.platform === "darwin") {
       exec(`open "${url}"`);
       return true;
