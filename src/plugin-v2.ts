@@ -29,6 +29,7 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { once } from "node:events";
 import { spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { AntigravityCLIOAuthPlugin } from "./plugin";
@@ -233,13 +234,48 @@ async function createV2Proxy(interceptor: InterceptorFetch | null): Promise<V2Pr
 // ---------------------------------------------------------------------------
 
 function loginCliUrl(): URL {
-  return new URL("../cli/login.js", import.meta.url);
+  // Resolve to the bundled CLI (dist/cli/login.cjs, see build:cli). The `..`
+  // depth depends on where this module lives: ../ from the source tree
+  // (src/plugin-v2.ts) reaches the package root, ../../ is needed from the
+  // compiled build (dist/src/plugin-v2.js).
+  const fromSource = /\/src\//.test(import.meta.url) || /\\src\\/.test(import.meta.url);
+  const relative = fromSource ? "../dist/cli/login.cjs" : "../../dist/cli/login.cjs";
+  return new URL(relative, import.meta.url);
+}
+
+/** argv that launches the bundled login CLI inside a real terminal window. */
+function loginCommandArgs(directory: string): string[] {
+  const script = fileURLToPath(loginCliUrl());
+  if (process.platform === "win32") {
+    // `start` treats its first quoted argument as the window title; /wait
+    // keeps the caller (and the integration dialog) open until login closes.
+    return ["cmd", "/c", "start", "Antigravity Login", "/wait", "node", script, directory];
+  }
+  if (process.platform === "darwin") {
+    return ["osascript", "-e", `tell application "Terminal" to do script "node '${script}' '${directory}'"`];
+  }
+  // Linux: launch via a terminal emulator (the on('error') handler below
+  // covers emulators that aren't installed).
+  return ["x-terminal-emulator", "-e", "node", script, directory];
 }
 
 function runLoginCli(directory: string): Promise<void> {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [fileURLToPath(loginCliUrl()), directory], { stdio: "inherit" });
-    child.on("error", () => resolve());
+    // The interactive menu-based login only works in a terminal the user owns:
+    // the V2 integration runner and the server execute commands without a TTY
+    // (stdout is swallowed, stdin is closed), so attaching stdio here would
+    // render the menu invisible. Instead, open the bundled CLI in a fresh
+    // terminal window. The CLI itself forces the no-browser manual-paste flow
+    // (ANTIGRAVITY_NO_BROWSER / OPENCODE_HEADLESS).
+    const args = loginCommandArgs(directory);
+    const child: ChildProcess = spawn(args[0]!, args.slice(1), {
+      stdio: "ignore",
+      env: { ...process.env, FORCE_COLOR: "1" },
+    });
+    child.on("error", (err) => {
+      log.warn("antigravity-login: failed to start login terminal", { error: err.message, binary: args[0] });
+      resolve();
+    });
     child.on("exit", () => resolve());
   });
 }
@@ -356,7 +392,7 @@ export default {
             id: "antigravity-oauth",
             type: "command",
             label: "Sign in with Google (Antigravity)",
-            command: [process.execPath, fileURLToPath(loginCliUrl())],
+            command: loginCommandArgs(directory),
           },
         } as never);
       }),
@@ -388,7 +424,7 @@ export default {
       }
     })();
 
-    log.debug("plugin-ready", { directory, proxyPort: proxy.port, interception: proxy.fetchInterceptor != null });
+    log.debug("plugin-ready", { directory, proxyPort: proxy.port, interception: proxy.fetchInterceptor != null, loginCli: loginCliUrl().pathname });
 
     // 8. Cleanup on unload.
     return async () => {
