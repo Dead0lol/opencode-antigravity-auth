@@ -9,10 +9,17 @@
  * Invoked by the `/antigravity-login` slash command and the "google" integration
  * command method with stdio inherited (interactive TTY prompts work as in V1).
  *
- * Usage: node dist/cli/login.js [directory]
+ * Usage: node dist/cli/login.cjs [directory]
  */
 import { AntigravityCLIOAuthPlugin } from "../plugin";
 import type { AuthMethod, PluginClient, PluginResult } from "../plugin/types";
+
+// V2 login always uses the terminal-only flow: interactive menu, OAuth URL
+// printed to the console, paste the redirected URL back. Never auto-open a
+// browser and never start a local callback listener (same UX as the classic
+// Gemini CLI `auth login`).
+process.env.ANTIGRAVITY_NO_BROWSER = "1";
+process.env.OPENCODE_HEADLESS = "1";
 
 function createConsoleClient() {
   return {
