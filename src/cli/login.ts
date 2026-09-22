@@ -28,7 +28,7 @@ process.env.OPENCODE_HEADLESS = "1";
 // saved into opencode's auth store (the "Google / Google 2 / Google 3"
 // API-key credential corruption bug). Only a real terminal may drive the
 // interactive menu.
-if (!process.stdin.isTTY) {
+if (!process.stdin.isTTY || !process.stdout.isTTY) {
   console.error(
     "[antigravity] Login requires an interactive terminal.\n" +
       "Run `opencode auth login` from a terminal, or use the login window that opens automatically.",
