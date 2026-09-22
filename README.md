@@ -105,6 +105,52 @@ opencode run "Hello" --model=google/antigravity-claude-opus-4-6-thinking --varia
 
 ---
 
+## OpenCode V2
+
+<details open>
+<summary><b>V2 (OpenCode 2.x) — install & usage</b></summary>
+
+Since **OpenCode 2.0.12** this plugin runs natively under the V2 plugin system (V1 plugins do not load on V2). On a V2 build, install as follows — the V1 instructions above do not apply.
+
+**1. Add the plugin** to `~/.config/opencode/opencode.json`. V2 uses a `plugins` array (note the `s` — a V1 `plugin` key is ignored by V2):
+
+```jsonc
+{
+  "plugins": ["opencode-antigravity-auth@latest"]
+}
+```
+
+A local checkout works the same way:
+
+```jsonc
+{
+  "plugins": ["/path/to/opencode-antigravity-auth"]
+}
+```
+
+**2. Login** with your Google account. There is no `opencode auth login` flow for this plugin on V2 — instead use one of:
+
+- The `/antigravity-login` slash command, or
+- The `google` integration command method: `/google antigravity-oauth`
+
+**3. Models** — add the Antigravity models under the `google` provider using the [full models configuration](#models) below. The plugin registers the `google_search` tool and rewrites `google` provider model requests through its interceptor automatically.
+
+**4. Use it:**
+
+```bash
+opencode run "Hello" --model google/antigravity-claude-opus-4-6-thinking
+```
+
+Verify the plugin loaded:
+
+```bash
+opencode api get /api/plugin   # opencode-antigravity-auth → status "active"
+```
+
+</details>
+
+---
+
 ## Models
 
 ### Model Reference
